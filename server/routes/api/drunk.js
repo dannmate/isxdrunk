@@ -17,15 +17,13 @@ router.post('/confirm', async (req,res) => {
     await confirmations.insertOne({
         user: req.body.user,
         sumbittedAt: new Date(),
-        image: ''
+        image: req.body.image
 
     });
     res.status(201).send();
-    res.send(await confirmations.find({}).toArray());
 });
 
 async function getConfirmations() {
-    console.log(process.env);
     const client = await mongodb.MongoClient.connect(
         process.env.MONGODB_CONNECTION_STRING,{useNewUrlParser: true, useUnifiedTopology: true});
 
