@@ -12,10 +12,12 @@ app.use(cors());
 
 const drunk = require('./routes/api/drunk');
 const user = require('./routes/api/user');
+const image = require('./routes/api/image');
 
 // Add routes
 app.use('/api/drunk/', drunk);
 app.use('/api/user/', user);
+app.use('/api/image/', image);
 
 // Handle production build
 if(process.env.NODE_ENV === 'production') {
