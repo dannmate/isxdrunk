@@ -1,4 +1,5 @@
 const mongodb  = require('mongodb');
+const AWS = require('aws-sdk');
 require('dotenv').config();
 
 module.exports = {
@@ -20,8 +21,47 @@ module.exports = {
     
         return client.db('isxdrunk').collection('user');
     },
-    uploadImageToS3Bucket: async function(base64Img) {
-      
+    uploadImageToS3Bucket: async function(base64, filename) {
+
+        try {
+            // Configure AWS with access and secret key.
+          const { ACCESS_KEY_ID, SECRET_ACCESS_KEY, AWS_REGION, S3_BUCKET } = process.env;
+  
+          // Configure AWS to use promise
+          AWS.config.setPromisesDependency(require('bluebird'));
+          AWS.config.update({ accessKeyId: ACCESS_KEY_ID, secretAccessKey: SECRET_ACCESS_KEY, region: AWS_REGION });
+  
+          //const base64 = "data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==";
+  
+          const s3 = new AWS.S3();
+          const base64Data = new Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+          const type = base64.split(';')[0].split('/')[1];
+          const userId = filename;
+  
+        //   console.log(base64Data);
+        //   console.log(type)
+  
+          const params = {
+              Bucket: S3_BUCKET,
+              Key: `${userId}.${type}`, // type is not required
+              Body: base64Data,
+              ACL: 'public-read',
+              ContentEncoding: 'base64', 
+              ContentType: `image/${type}` 
+            }
+          
+          let location = '';
+          let key = '';
+          
+          const { Location, Key } = await s3.upload(params).promise();
+          location = Location;
+          key = Key;
+          
+          return location;
+      } 
+      catch(err){
+        throw new Error(err.message)
+      }
 
     }
     

@@ -6,8 +6,9 @@ require('dotenv').config();
 const app = express();
 
 // Middleware
-
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '10mb', extended: true}))
+app.use(bodyParser.urlencoded({limit: '10mb', extended: true}))
+//app.use(bodyParser.json());
 app.use(cors());
 
 const drunk = require('./routes/api/drunk');

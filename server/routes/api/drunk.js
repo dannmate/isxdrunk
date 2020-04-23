@@ -1,6 +1,7 @@
 const express = require('express');
 const mongodb  = require('mongodb');
 const util = require('../../modules/util');
+const AWS = require('aws-sdk');
 require('dotenv').config();
 
 const router = express.Router();
@@ -33,9 +34,20 @@ router.get('/confirmations', async (req,res) => {
 });
 
 // this is a dummy test route to test certain functionality independently 
-router.get('/test', async (req,res) => {
+router.post('/test', async (req,res) => {
+    try {
+        const imgUrl = await util.uploadImageToS3Bucket(req.body.base64Img, req.body.fileName);
+   
+        res.status(201).send({"img": imgUrl})
+    }
+    catch(err) {
+        res.status(400).send({
+            "message": err.message
+        }); 
 
-    res.send();
+    }
+ 
+    
 });
 
 router.post('/confirm', async (req,res) => {
