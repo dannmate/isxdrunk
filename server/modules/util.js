@@ -4,24 +4,27 @@ require('dotenv').config();
 
 module.exports = {
     getDrunk: async function() {
+
         const client = await mongodb.MongoClient.connect(
             process.env.MONGODB_CONNECTION_STRING,{useNewUrlParser: true, useUnifiedTopology: true});
     
         return client.db('isxdrunk').collection('drunk');
     },
     checkDrunk: async function(drunkCollection) {
+
         const current_ts = new Date();
         const maxDrunkTs = await drunkCollection.find().sort({drunkEndDate:-1}).limit(1).toArray();
 
         return current_ts < maxDrunkTs[0].drunkEndDate;
     },
     getUsers: async function(drunkCollection) {
+
         const client = await mongodb.MongoClient.connect(
             process.env.MONGODB_CONNECTION_STRING,{useNewUrlParser: true, useUnifiedTopology: true});
     
         return client.db('isxdrunk').collection('user');
     },
-    uploadImageToS3Bucket: async function(base64, filename) {
+    uploadImageToS3Bucket: async function(base64) {
 
         try {
             // Configure AWS with access and secret key.
@@ -36,14 +39,11 @@ module.exports = {
           const s3 = new AWS.S3();
           const base64Data = new Buffer.from(base64.replace(/^data:image\/\w+;base64,/, ""), 'base64');
           const type = base64.split(';')[0].split('/')[1];
-          const userId = filename;
-  
-        //   console.log(base64Data);
-        //   console.log(type)
+          const fileID = await this.uuidv4();
   
           const params = {
               Bucket: S3_BUCKET,
-              Key: `${userId}.${type}`, // type is not required
+              Key: `${fileID}.${type}`, 
               Body: base64Data,
               ACL: 'public-read',
               ContentEncoding: 'base64', 
@@ -63,8 +63,22 @@ module.exports = {
         throw new Error(err.message)
       }
 
+    },
+    uuidv4: async function() {
+
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+          });
+    },
+    getDrunkImages: async function() {
+
+        const client = await mongodb.MongoClient.connect(
+            process.env.MONGODB_CONNECTION_STRING,{useNewUrlParser: true, useUnifiedTopology: true});
+    
+        return client.db('isxdrunk').collection('images');
     }
     
 
 }
-
+  

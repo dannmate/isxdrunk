@@ -12,11 +12,42 @@ router.get('/', async (req,res) => {
         const drunkCollection = await util.getDrunk();
         const isDrunk = await util.checkDrunk(drunkCollection);
 
-        // TODO: get image collection from maxdate - 9 hours (8 hours ago plus the 1 to capture all confirmations)
+        // get latest drunk event
+        const maxDrunkTs = await drunkCollection.find().sort({drunkEndDate:-1}).limit(1).toArray();
 
-        res.send({
-            "isDrunk": isDrunk
-        });
+        if (isDrunk) {
+
+            const images = await util.getDrunkImages();
+            // get all the images related to this drunk event. only keep relevant fields. sort by submitted at desc
+            const currentDrunkImages = await images.find({drunkId: maxDrunkTs[0]._id }, {projection:{imageURL: 1, _id: 0 }}).sort( { submittedAt: -1 } ).toArray();
+
+            res.send({
+                "isDrunk": isDrunk,
+                "currentDrunkImgs": currentDrunkImages
+            });
+        } else {
+
+            let daysSinceDrunk = 0;
+            const freshDrunkCollection = await util.getDrunk();
+                const findAll =  await freshDrunkCollection.find({ }).toArray()
+            // check if theres been an actual drunk even since orginal dummy drunk event.
+            // if not set to -1 else get the days since last drunk event
+            if (Object.keys(findAll).length == 1) {
+
+                daysSinceDrunk = -1
+            } else {
+
+                const today = new Date();
+                daysSinceDrunk = Math.floor(( today - maxDrunkTs[0].drunkEndDate ) / 86400000); 
+            }
+            
+            res.send({
+                "isDrunk": isDrunk,
+                "daysSinceDrunk": daysSinceDrunk
+            });
+
+        }
+        
     }
     catch(err) {
         res.status(400).send({
@@ -34,20 +65,9 @@ router.get('/confirmations', async (req,res) => {
 });
 
 // this is a dummy test route to test certain functionality independently 
-router.post('/test', async (req,res) => {
-    try {
-        const imgUrl = await util.uploadImageToS3Bucket(req.body.base64Img, req.body.fileName);
-   
-        res.status(201).send({"img": imgUrl})
-    }
-    catch(err) {
-        res.status(400).send({
-            "message": err.message
-        }); 
-
-    }
- 
-    
+router.get('/test', async (req,res) => {
+    res.status(201).send()
+     
 });
 
 router.post('/confirm', async (req,res) => {
@@ -67,14 +87,19 @@ router.post('/confirm', async (req,res) => {
 
             if (userAuthorized == 1) {
 
-                // TODO: upload image to S3 bucket and add url to DB.
+                const images = await util.getDrunkImages();
+                const imgUrl = await util.uploadImageToS3Bucket(req.body.base64Img);
 
-                await confirmations.insertOne({
+                const confirmationInsert = await confirmations.insertOne({
                     user: req.body.user,
+                    submittedAt: current_ts
+                }); 
+
+                 await images.insertOne({
                     submittedAt: current_ts,
-                    imageURL: '',
-                    drunkId: ''
-            
+                    confirmationID: confirmationInsert.insertedId,
+                    drunkId: null,
+                    imageURL: imgUrl        
                 }); 
 
                 const lastHour = new Date();
@@ -93,9 +118,9 @@ router.post('/confirm', async (req,res) => {
                         drunkEndDate: addEightHours
                     }); 
                     
-                    // update the confirmations drunk id, as they are now directly linked to the latest drunk event
+                    // update the confirmations image drunk id, as they are now directly linked to the latest drunk event
                     // this helps us get the images related to a drunk event
-                    await confirmations.updateMany(
+                    await images.updateMany(
                         { "submittedAt": { $gt: lastHour} },
                         { $set: { drunkId: drunkInsert.insertedId } }
                     )
