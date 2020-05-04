@@ -128,21 +128,15 @@ router.post('/confirm', async (req,res) => {
 
                 res.status(201).send();
             } else {
-                res.status(400).send({
-                    "message": "Invalid secret code"
-                });
+                res.status(400).send("Invalid secret code");
             }
         } else {
-            res.status(400).send({
-                "message": "Cannot add a drunk confirmation when they are drunk!"
-            });
+            res.status(400).send("Cannot add a drunk confirmation when they are drunk!");
         }
            
     }
     catch(err) {
-        res.status(400).send({
-            "message": err.message
-         });
+        res.status(400).send(err.message);
     }
   
 });
